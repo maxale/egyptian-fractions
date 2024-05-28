@@ -603,7 +603,7 @@ def res_rep_MNSD(s, N, MIN_DENOM = 1):
 def count_rep_MNSD(s, N, min_denom = 1):
     assert N%2
     N_ = (N+1)//2
-    return res_cf_rep_MNSD(s,N_,MIN_DENOM=min_denom).map_reduce(lambda t: int(t[0]==0 and len(t[1])==N_))
+    return res_rep_MNSD(s,N_,MIN_DENOM=min_denom).map_reduce(lambda t: int(t[0]==0 and len(t[1])==N_))
 
 def all_rep_MNSD(s, N, min_denom = 1):
     assert N%2
@@ -611,7 +611,7 @@ def all_rep_MNSD(s, N, min_denom = 1):
     def func(t):
         print(t)
         return {t}
-    return res_cf_rep_MNSD(s,N_,MIN_DENOM=min_denom).map_reduce(lambda t: func(t[1]) if t[0]==0 and len(t[1])==N_ else set(), set.union, set())
+    return res_rep_MNSD(s,N_,MIN_DENOM=min_denom).map_reduce(lambda t: func(t[1]) if t[0]==0 and len(t[1])==N_ else set(), set.union, set())
 
 
 ########################################################## Dynamically take into account Theorem 8.5
