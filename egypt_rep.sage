@@ -12,7 +12,8 @@ It provides the following general functions:
 * all_cf_rep(s, cf): computes the representations of `s` with numerators given by list `cf`.
 * count_cf_rep(s, cf): counts the representations of `s` with numerators given by list `cf`.
 
-It further provides functions for computing representations corresponding to the fusion ring types used in the paper:
+It further provides functions for computing representations corresponding to the formal codegrees 
+of integral fusion categories used in the paper: 
 "Classifying integral Grothendieck rings up to rank 5 and beyond" https://arxiv.org/abs/2507.07023
 
 * count_rep_MNSD(s, N): same as above under MNSD (maximally non self-dual) constraint.
