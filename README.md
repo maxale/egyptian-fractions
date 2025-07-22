@@ -1,6 +1,6 @@
 Repository provides SageMath codes related to computing Egyptian fractions:
 
-* `egypt_rep.sage` - computes/enumerates general Egyptian fractions, and those corresponding to the fusion ring types.
+* `egypt_rep.sage` - computes/enumerates general Egyptian fractions, and those corresponding to the formal codegrees of integral fusion categories.
 It accompanies the paper *"Classifying integral Grothendieck rings up to rank 5 and beyond"* by Max A. Alekseyev, Winfried Bruns, Jingcheng Dong, Sebastien Palcoux
 https://arxiv.org/abs/2507.07023
 
