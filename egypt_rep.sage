@@ -24,6 +24,7 @@ Functions may have optional parameters not mentioned above.
 -----------------------
 
 Brief history:
+* 20250917 - minor bugfixes
 * 20250720 - first public release
 '''
 
@@ -273,7 +274,7 @@ def res_rep(s, N, ODD_ONLY = False, MIN_DENOM = 1, MAX_DENOM = +oo, DISTINCT = F
 
         if DISTINCT:
             # Note if ODD_ONLY, m[-1] is odd, and the number of odd elements in [m[-1]+2,M_D] is [ (M_D-m[-1])/2 ]
-            if (M_D - m[-1])//(1+int(ODD_ONLY)) < N-len(m):
+            if (M_D - m[-1])/(1+int(ODD_ONLY)) < N-len(m):
                 return []
             s_ = sum( 1/(M_D-i*(1+int(ODD_ONLY))) for i in range(N-1-len(m)) )
             if s_ >= s0:
@@ -361,7 +362,7 @@ def exist_rep(s, N, odd_only = False, distinct = False, min_denom = 1, max_denom
             return 0
 
         res_rep(s,N,ODD_ONLY=odd_only,DISTINCT=distinct,MIN_DENOM=min_denom,MAX_DENOM=max_denom).map_reduce(found)
-        q.put(tuple())
+        q.put(None)
 
     p1 = multiprocessing.Process(target=res_search)
     p1.start()
