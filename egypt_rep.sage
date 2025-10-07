@@ -24,6 +24,7 @@ Functions may have optional parameters not mentioned above.
 -----------------------
 
 Brief history:
+* 20251006 - improved with use of post_process= and RESetParallelIterator
 * 20250917 - minor bugfixes
 * 20250720 - first public release
 '''
@@ -35,6 +36,7 @@ BERTRAM = False
 import itertools
 import multiprocessing
 
+from sage.parallel.map_reduce import RESetParallelIterator
 
 ######################################################## Approaches
 r'''
@@ -323,7 +325,7 @@ def res_rep(s, N, ODD_ONLY = False, MIN_DENOM = 1, MAX_DENOM = +oo, DISTINCT = F
 
         return ( (s0-1/r, m+(r,)) for r in range(L,U+1) if r%2 or not ODD_ONLY )
 
-    #return RecursivelyEnumeratedSet(seeds=[(s-1/r,(r,)) for r in range(MIN_DENOM,floor(N/s)+1,1+int(ODD_ONLY))], successors=succ, structure='forest')
+    #return RecursivelyEnumeratedSet(seeds=[(s-1/r,(r,)) for r in range(MIN_DENOM,floor(N/s)+1,1+int(ODD_ONLY))], successors=succ, structure='forest', post_process=lambda t: t[1] if t[0]==0 and len(t[1])==N else None)
 
     S = s if type(s) in [list,tuple] else [s]
     my_seeds = []
@@ -336,7 +338,7 @@ def res_rep(s, N, ODD_ONLY = False, MIN_DENOM = 1, MAX_DENOM = +oo, DISTINCT = F
         import random
         random.shuffle(my_seeds)
 
-    return RecursivelyEnumeratedSet(seeds=my_seeds, successors=succ, structure='forest')
+    return RecursivelyEnumeratedSet(seeds=my_seeds, successors=succ, structure='forest', post_process=lambda t: t[1] if t[0]==0 and len(t[1])==N else None)
 
 
 def all_rep(s, N, odd_only = False, min_denom = 1, max_denom = +oo, distinct = False, verbose = False):
@@ -344,49 +346,17 @@ def all_rep(s, N, odd_only = False, min_denom = 1, max_denom = +oo, distinct = F
         if verbose:
             print('all_rep:', t)
         return {t}
-    return res_rep(s,N,ODD_ONLY=odd_only,MIN_DENOM=min_denom,MAX_DENOM=max_denom,DISTINCT=distinct).map_reduce(lambda t: func(t[1]) if t[0]==0 and len(t[1])==N else set(), set.union, set() )
+    return res_rep(s,N,ODD_ONLY=odd_only,MIN_DENOM=min_denom,MAX_DENOM=max_denom,DISTINCT=distinct).map_reduce(func, set.union, set())
 
 def count_rep(s, N, odd_only = False, min_denom = 1, max_denom = +oo, distinct = False):
-    return res_rep(s,N,ODD_ONLY=odd_only,MIN_DENOM=min_denom,MAX_DENOM=max_denom,DISTINCT=distinct).map_reduce(lambda t: int(t[0]==0 and len(t[1])==N))
+    return res_rep(s,N,ODD_ONLY=odd_only,MIN_DENOM=min_denom,MAX_DENOM=max_denom,DISTINCT=distinct).map_reduce()
 
 def exist_rep(s, N, odd_only = False, distinct = False, min_denom = 1, max_denom = +oo):
-    # import os, signal
-    import psutil, multiprocessing
-
-    q = multiprocessing.Queue()
-
-    def res_search():
-        def found(t):
-            if t[0]==0 and len(t[1])==N:
-                q.put(t[1])
-            return 0
-
-        res_rep(s,N,ODD_ONLY=odd_only,DISTINCT=distinct,MIN_DENOM=min_denom,MAX_DENOM=max_denom).map_reduce(found)
-        q.put(None)
-
-    p1 = multiprocessing.Process(target=res_search)
-    p1.start()
-
-    res = q.get()
-
-    #p1.terminate()
-    #p1.kill()
-
-    if res:
-        # os.system(f'pkill -TERM -P {p1.pid}')         # does not work
-        parent = psutil.Process(p1.pid)
-        for child in parent.children(recursive=True):
-            try:
-                child.kill()
-            except psutil.NoSuchProcess:
-                pass
-        try:
-            parent.kill()
-        except psutil.NoSuchProcess:
-            pass
-
-    return res
-
+    try:
+        next( iter(RESetParallelIterator(forest=res_rep(s,N,ODD_ONLY=odd_only,MIN_DENOM=min_denom,MAX_DENOM=max_denom,DISTINCT=distinct))) )
+    except StopIteration:
+        return False
+    return True
 
 #####################################################################################################################
 ################################################################## (possibly distinct) denominators with coefficients
@@ -484,7 +454,7 @@ def res_cf_rep(s, cf, ODD_ONLY = False, MIN_DENOM = 1, MAX_DENOM = +oo, PRIME_BO
     if ODD_ONLY and MIN_DENOM%2==0:
         MIN_DENOM += 1
 
-    return RecursivelyEnumeratedSet(seeds=[(s-cf[0]/r,(r,)) for r in range(MIN_DENOM,floor(sum(cf)/s)+1,1+int(ODD_ONLY)) if (not PRIME_BOUND or largest_prime_factor(r)<=PRIME_BOUND)], successors=succ, structure='forest')
+    return RecursivelyEnumeratedSet(seeds=[(s-cf[0]/r,(r,)) for r in range(MIN_DENOM,floor(sum(cf)/s)+1,1+int(ODD_ONLY)) if (not PRIME_BOUND or largest_prime_factor(r)<=PRIME_BOUND)], successors=succ, structure='forest', post_process=lambda t: t[1] if t[0]==0 and len(t[1])==N else None)
 
 
 def all_cf_rep(s, cf, odd_only = False, min_denom = 1, max_denom = +oo, distinct = False):
@@ -492,12 +462,12 @@ def all_cf_rep(s, cf, odd_only = False, min_denom = 1, max_denom = +oo, distinct
     def func(t):
         print(t)
         return {t}
-    return res_cf_rep(s,cf,ODD_ONLY=odd_only,MIN_DENOM=min_denom,MAX_DENOM=max_denom,DISTINCT=distinct).map_reduce(lambda t: func(t[1]) if t[0]==0 and len(t[1])==N else set(), set.union, set() )
+    return res_cf_rep(s,cf,ODD_ONLY=odd_only,MIN_DENOM=min_denom,MAX_DENOM=max_denom,DISTINCT=distinct).map_reduce(func, set.union, set())
 
 
 def count_cf_rep(s, N, odd_only = False, min_denom = 1, distinct = False):
     N = len(cf)
-    return res_cf_rep(s,cf,ODD_ONLY=odd_only,MIN_DENOM=min_denom,DISTINCT=distinct).map_reduce(lambda t: int(t[0]==0 and len(t[1])==N))
+    return res_cf_rep(s,cf,ODD_ONLY=odd_only,MIN_DENOM=min_denom,DISTINCT=distinct).map_reduce()
 
 
 ################################################################ MNSD (maximally non self-dual) constraint
@@ -515,7 +485,7 @@ def res_rep_MNSD(s, N, MIN_DENOM = 1):
 def count_rep_MNSD(s, N, min_denom = 1):
     assert N%2
     N_ = (N+1)//2
-    return res_rep_MNSD(s,N_,MIN_DENOM=min_denom).map_reduce(lambda t: int(t[0]==0 and len(t[1])==N_))
+    return res_rep_MNSD(s,N_,MIN_DENOM=min_denom).map_reduce()
 
 def all_rep_MNSD(s, N, min_denom = 1):
     assert N%2
@@ -523,5 +493,5 @@ def all_rep_MNSD(s, N, min_denom = 1):
     def func(t):
         print(t)
         return { tuple(sorted(t*2)[:-1]) }
-    return res_rep_MNSD(s,N_,MIN_DENOM=min_denom).map_reduce(lambda t: func(t[1]) if t[0]==0 and len(t[1])==N_ else set(), set.union, set())
+    return res_rep_MNSD(s,N_,MIN_DENOM=min_denom).map_reduce(func, set.union, set())
 
