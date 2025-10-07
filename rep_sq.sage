@@ -1,4 +1,4 @@
-# rep_sq.sage (c) 2021,24 by Max Alekseyev
+# rep_sq.sage (c) 2021,25 by Max Alekseyev
 
 __doc__ = r'''
 Compute representations of a given rational number as Egyptian fractions with squared denominators.
@@ -27,6 +27,7 @@ Functions may have optional parameters not mentioned above.
 -----------------------
 
 Brief history:
+* 20251006 - improved with use of post_process=
 * 20240524 - first public release
 * 20240522 - res_cf_rep() was buggy with ODD_ONLY = True
 * 20240317 - Fixed bug in complete2trial() when n_b is not coprime to q
@@ -429,17 +430,17 @@ def res_rep(s, N, ODD_ONLY = False, MIN_DENOM = 1, PRIME_BOUND = None):
         # Note that L is odd when ODD_ONLY==True
         return ( (s0-1/r^2, m+(r,)) for r in range(L,U+1,1+int(ODD_ONLY)) if (not PRIME_BOUND or largest_prime_factor(r)<=PRIME_BOUND) )
 
-    return RecursivelyEnumeratedSet(seeds=[(s-1/r^2,(r,)) for r in range(max(MIN_DENOM,(ceil(1/s)-1).isqrt()+1),floor(N/s).isqrt()+1,1+int(ODD_ONLY)) if (not PRIME_BOUND or largest_prime_factor(r)<=PRIME_BOUND)], successors=succ, structure='forest')
+    return RecursivelyEnumeratedSet(seeds=[(s-1/r^2,(r,)) for r in range(max(MIN_DENOM,(ceil(1/s)-1).isqrt()+1),floor(N/s).isqrt()+1,1+int(ODD_ONLY)) if (not PRIME_BOUND or largest_prime_factor(r)<=PRIME_BOUND)], successors=succ, structure='forest', post_process=lambda t: t[1] if t[0]==0 and len(t[1])==N else None)
 
 
 def all_rep(s, N, odd_only = False, min_denom = 1):
     def func(t):
         print(t)
         return {t}
-    return res_rep(s,N,ODD_ONLY=odd_only,MIN_DENOM=min_denom).map_reduce(lambda t: func(t[1]) if t[0]==0 and len(t[1])==N else set(), set.union, set() )
+    return res_rep(s,N,ODD_ONLY=odd_only,MIN_DENOM=min_denom).map_reduce(func, set.union, set())
 
 def count_rep(s, N, odd_only = False, min_denom = 1):
-    return res_rep(s,N,ODD_ONLY=odd_only,MIN_DENOM=min_denom).map_reduce(lambda t: int(t[0]==0 and len(t[1])==N))
+    return res_rep(s,N,ODD_ONLY=odd_only,MIN_DENOM=min_denom).map_reduce()
 
 
 def all_rep_primes23(N):
@@ -450,7 +451,7 @@ def all_rep_primes23(N):
 
     res = set()
     for q in range(1,N+1):
-        res = res_rep(q,N,PRIME_BOUND=3).map_reduce(lambda t: func(t[1]) if t[0]==0 and len(t[1])==N else set(), set.union, res )
+        res = res_rep(q,N,PRIME_BOUND=3).map_reduce(func, set.union, res)
     return res
 
 
@@ -573,7 +574,7 @@ def res_cf_rep(s, cf, ODD_ONLY = False, MIN_DENOM = 1, PRIME_BOUND = None, DISTI
     if ODD_ONLY and MIN_DENOM%2==0:
         MIN_DENOM += 1
 
-    return RecursivelyEnumeratedSet(seeds=[(s-cf[0]/r^2,(r,)) for r in range(MIN_DENOM,floor(sum(cf)/s).isqrt()+1,1+int(ODD_ONLY)) if (not PRIME_BOUND or largest_prime_factor(r)<=PRIME_BOUND)], successors=succ, structure='forest')
+    return RecursivelyEnumeratedSet(seeds=[(s-cf[0]/r^2,(r,)) for r in range(MIN_DENOM,floor(sum(cf)/s).isqrt()+1,1+int(ODD_ONLY)) if (not PRIME_BOUND or largest_prime_factor(r)<=PRIME_BOUND)], successors=succ, structure='forest', post_process=lambda t: t[1] if t[0]==0 and len(t[1])==N else None)
 
 
 def all_cf_rep(s, cf, odd_only = False, min_denom = 1, distinct = False):
@@ -581,12 +582,12 @@ def all_cf_rep(s, cf, odd_only = False, min_denom = 1, distinct = False):
     def func(t):
         print(t)
         return {t}
-    return res_cf_rep(s,cf,ODD_ONLY=odd_only,MIN_DENOM=min_denom,DISTINCT=distinct).map_reduce(lambda t: func(t[1]) if t[0]==0 and len(t[1])==N else set(), set.union, set() )
+    return res_cf_rep(s,cf,ODD_ONLY=odd_only,MIN_DENOM=min_denom,DISTINCT=distinct).map_reduce(func, set.union, set())
 
 
 def count_cf_rep(s, N, odd_only = False, min_denom = 1, distinct = False):
     N = len(cf)
-    return res_cf_rep(s,cf,ODD_ONLY=odd_only,MIN_DENOM=min_denom,DISTINCT=distinct).map_reduce(lambda t: int(t[0]==0 and len(t[1])==N))
+    return res_cf_rep(s,cf,ODD_ONLY=odd_only,MIN_DENOM=min_denom,DISTINCT=distinct).map_reduce()
 
 
 ################################################################ MNSD (maximally non self-dual) condition
@@ -603,7 +604,7 @@ def res_rep_MNSD(s, N, MIN_DENOM = 1):
 def count_rep_MNSD(s, N, min_denom = 1):
     assert N%2
     N_ = (N+1)//2
-    return res_rep_MNSD(s,N_,MIN_DENOM=min_denom).map_reduce(lambda t: int(t[0]==0 and len(t[1])==N_))
+    return res_rep_MNSD(s,N_,MIN_DENOM=min_denom).map_reduce()
 
 def all_rep_MNSD(s, N, min_denom = 1):
     assert N%2
@@ -611,7 +612,7 @@ def all_rep_MNSD(s, N, min_denom = 1):
     def func(t):
         print(t)
         return {t}
-    return res_rep_MNSD(s,N_,MIN_DENOM=min_denom).map_reduce(lambda t: func(t[1]) if t[0]==0 and len(t[1])==N_ else set(), set.union, set())
+    return res_rep_MNSD(s,N_,MIN_DENOM=min_denom).map_reduce(func, set.union, set())
 
 
 ########################################################## Dynamically take into account Theorem 8.5
@@ -807,7 +808,7 @@ def res_rep_th85(s, N, ODD_ONLY = False, MIN_DENOM = 1, PRIME_BOUND = None, L_MA
 
         return SUCC
 
-    return RecursivelyEnumeratedSet(seeds=[ ( s-1/r^2, (r,), max(L_MAX,(1 if (p:=largest_prime_factor(r))<=2 else (p-1)//2)) ) for r in range(max(MIN_DENOM,(ceil(1/s)-1).isqrt()+1),floor(N/s).isqrt()+1,1+int(ODD_ONLY)) if (not PRIME_BOUND or largest_prime_factor(r)<=PRIME_BOUND)], successors=succ, structure='forest')
+    return RecursivelyEnumeratedSet(seeds=[ ( s-1/r^2, (r,), max(L_MAX,(1 if (p:=largest_prime_factor(r))<=2 else (p-1)//2)) ) for r in range(max(MIN_DENOM,(ceil(1/s)-1).isqrt()+1),floor(N/s).isqrt()+1,1+int(ODD_ONLY)) if (not PRIME_BOUND or largest_prime_factor(r)<=PRIME_BOUND)], successors=succ, structure='forest', post_process=lambda t: t[1] if t[0]==0 and len(t[1])==N else None)
 
 
 
@@ -822,7 +823,7 @@ def all_rep_th87(N,l_max=1,prime_lb=0):
 
     res = set()
     for q in range(1,N+1):
-        res = res_rep_th85(q,N,L_MAX=l_max,PRIME_LB=prime_lb).map_reduce(lambda t: func(t[1]) if t[0]==0 and len(t[1])==N else set(), set.union, res )
+        res = res_rep_th85(q,N,L_MAX=l_max,PRIME_LB=prime_lb).map_reduce(func, set.union, res)
     return res
 
 
