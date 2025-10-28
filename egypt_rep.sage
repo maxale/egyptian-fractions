@@ -1,4 +1,4 @@
-# egypt_rep.sage (c) 2021,25 by Max Alekseyev
+# egypt_rep.sage ver. 20251028 (c) 2021,25 by Max Alekseyev
 
 __doc__ = r'''
 Compute representations of a given rational number as Egyptian fractions,
@@ -7,7 +7,7 @@ utilizing parallelization via Sage's recursively enumerable sets (RES) functiona
 It provides the following general functions:
 * all_rep(s, N): computes the length-`N` representations of a rational number `s`.
 * count_rep(s, N): counts the length-`N` representations of a rational number `s`.
-* exist_rep(s, N): tests if there exists a length-N representation of a rational number `s`.
+* one_rep(s, N): returns a length-N representation of a rational number `s`, or `None` if it doesn't exist.
 
 * all_cf_rep(s, cf): computes the representations of `s` with numerators given by list `cf`.
 * count_cf_rep(s, cf): counts the representations of `s` with numerators given by list `cf`.
@@ -24,6 +24,7 @@ Functions may have optional parameters not mentioned above.
 -----------------------
 
 Brief history:
+* 20251028 - safe early abort of RESetParallelIterator; exist_rep() renamed to one_rep()
 * 20251006 - improved with use of post_process= and RESetParallelIterator
 * 20250917 - minor bugfixes
 * 20250720 - first public release
@@ -351,12 +352,13 @@ def all_rep(s, N, odd_only = False, min_denom = 1, max_denom = +oo, distinct = F
 def count_rep(s, N, odd_only = False, min_denom = 1, max_denom = +oo, distinct = False):
     return res_rep(s,N,ODD_ONLY=odd_only,MIN_DENOM=min_denom,MAX_DENOM=max_denom,DISTINCT=distinct).map_reduce()
 
-def exist_rep(s, N, odd_only = False, distinct = False, min_denom = 1, max_denom = +oo):
-    try:
-        next( iter(RESetParallelIterator(forest=res_rep(s,N,ODD_ONLY=odd_only,MIN_DENOM=min_denom,MAX_DENOM=max_denom,DISTINCT=distinct))) )
-    except StopIteration:
-        return False
-    return True
+def one_rep(s, N, odd_only = False, distinct = False, min_denom = 1, max_denom = +oo):
+    RPI = RESetParallelIterator(forest=res_rep(s,N,ODD_ONLY=odd_only,MIN_DENOM=min_denom,MAX_DENOM=max_denom,DISTINCT=distinct))
+    for r in RPI:
+        RPI.abort()
+        RPI.finish()
+        return r
+    return None
 
 #####################################################################################################################
 ################################################################## (possibly distinct) denominators with coefficients
